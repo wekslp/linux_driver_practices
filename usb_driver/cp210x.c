@@ -18,12 +18,12 @@
 #include <linux/usb/serial.h>
 #include <asm/unaligned.h>
 
+#define USE_SERIAL_WRAPPER	1
+
 #define DRIVER_DESC		"CP210x driver for practice"
 
 #define CP210X_VENDOR_ID	0x10C4
 #define CP210X_DEVICE_ID	0xEA60
-
-
 
 static const struct usb_device_id id_table[] = {
 	{ USB_DEVICE(CP210X_VENDOR_ID, CP210X_DEVICE_ID) },
@@ -32,22 +32,58 @@ static const struct usb_device_id id_table[] = {
 
 MODULE_DEVICE_TABLE(usb, id_table);
 
+#if USE_SERIAL_WRAPPER
+int cp210x_open(struct tty_struct *tty, struct usb_serial_port *port)
+{
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		return 0;
+}
+
+void cp210x_close(struct usb_serial_port *port)
+{
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		return 0;
+}
+
 static int cp210x_probe(struct usb_serial *serial, const struct usb_device_id *id)
 {
-	printk(KERN_INFO "cp210x_probe\n");
-	return -1;
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		usb_set_serial_data(serial, (void *)id->driver_info);
+		return 0;
 }
 
 static void cp210x_disconnect(struct usb_serial *serial)
 {
-	printk(KERN_INFO "cp210x disconnect\n");
-	return -1;
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		return 0;
 }
 
 static void cp210x_release(struct usb_serial *serial)
 {
-	printk(KERN_INFO "cp210x release\n");
-	return -1;
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		return 0;
+}
+
+int cp210x_port_probe(struct usb_serial_port *port)
+{
+		printk(KERN_INFO "%s\n", __FUNCTION__);
+		return 0;
+}
+
+int cp210x_port_remove(struct usb_serial_port *port)
+{
+	printk(KERN_INFO "%s\n", __FUNCTION__);
+	return 0;
+}
+int cp210x_startup(struct usb_serial *serial)
+{
+	printk(KERN_INFO "%s\n", __FUNCTION__);
+	return 0;	
+}
+
+void cp210x_read_int_cb(struct urb *urb)
+{
+	printk(KERN_INFO "%s\n", __FUNCTION__);
 }
 
 static struct usb_serial_driver cp210x_device = {
@@ -56,9 +92,16 @@ static struct usb_serial_driver cp210x_device = {
 		.name ="cp210x driver practice",
 	},
 	.id_table =		id_table,
+	.num_ports = 	1, /*Must set the number, or driver cannot create ttyUSBx*/
 	.probe =		cp210x_probe,
-	.disconnect =		cp210x_disconnect,
+	.disconnect =	cp210x_disconnect,
 	.release =		cp210x_release,
+	.attach =		cp210x_startup,
+	.port_probe = 	cp210x_port_probe,
+	.port_remove = 	cp210x_port_remove,
+	.open =			cp210x_open,
+	.close =		cp210x_close,
+	.read_int_callback	=cp210x_read_int_cb
 };
 
 static struct usb_serial_driver * const serial_drivers[] = {
@@ -66,7 +109,8 @@ static struct usb_serial_driver * const serial_drivers[] = {
 };
 
 module_usb_serial_driver(serial_drivers, id_table);
-/*
+#else
+/* we have to use usb_serial_driver wrapper */
 static struct usb_driver cp210x_driver = {
 	.name =			"cp210x",
 	.probe =		usb_serial_probe,
@@ -107,5 +151,5 @@ void cp210x_cleanup_module(void)
 
 module_init(cp210x_init_module);
 module_exit(cp210x_cleanup_module);
-*/
+#endif
 MODULE_LICENSE("GPL");
